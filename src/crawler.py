@@ -7,6 +7,7 @@ import schedule
 import gdown
 from bot import Bot
 import os
+from pyshorteners import Shortener
 
 class Crawler:
     KEYWORDS = ["uefs", "universidade estadual de feira de santana", "universidade", "greve", "transporte", "ônibus", "paraliza ", "paralizam"]
@@ -48,8 +49,17 @@ class Crawler:
             bot.post(news['title'], news['description'], news['uri'], image_path)
         except Exception as e:
             print("Could not post twitter: {}".format(str(e)))
+            image_path = ""
+            
+            bot = Bot()
+            bot.post(news['title'], "", news['uri'], image_path)
             raise e
-
+    
+    def short_url(self, url:str):
+        s = Shortener()
+        new_url = s.tinyurl.short(url)
+        return new_url
+    
     def extract_from_acordacidade(self, max_range:int = 3):
         base_url = 'https://www.acordacidade.com.br/noticias/page/'
         
@@ -95,9 +105,10 @@ class Crawler:
                     self.insert_db(data)
                     
                     data['img'] = ""
+                    data['uri'] = self.short_url(data['uri'])
                     len_twitter_post = len(data['title']) + len(data['description']) + len(data['uri'])
                     if((len_twitter_post) > 280):
-                        data['description'] = data['description'][:(len_twitter_post - len(data['description']) - 277)] + "..."
+                        data['description'] = data['description'][:(len_twitter_post - len(data['description']) - 272)] + "..."
                     self.post_twitter(data)
     
     def extract_from_uefs(self):
@@ -140,11 +151,13 @@ class Crawler:
                 
 
             self.insert_db(data)
+            
             data['img'] = ""
+            data['uri'] = self.short_url(data['uri'])
             
             len_twitter_post = len(data['title']) + len(data['description']) + len(data['uri'])
             if((len_twitter_post) > 280):
-                data['description'] = data['description'][:(len_twitter_post - len(data['description']) - 277)] + "..."
+                data['description'] = data['description'][:(len_twitter_post - len(data['description']) - 272)] + "..."
             self.post_twitter(data)
 
 if __name__ == "__main__":
