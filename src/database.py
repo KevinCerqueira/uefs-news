@@ -16,9 +16,11 @@ class Database:
         db = client[os.getenv('DB_DATABASE')]
         self.news = db.news
   
-    def exists(self, uri:str) -> bool:
+    def exists(self, uri:str, external_id:str = "") -> bool:
         try:
             query = {'uri': uri}
+            if(external_id != ""):
+                query = {"$or": [{'uri': uri}, {'external_id': external_id}]}
             return self.news.count_documents(query) > 0
         except Exception as e:
             print(e)
