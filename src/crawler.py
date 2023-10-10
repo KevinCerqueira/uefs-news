@@ -33,6 +33,7 @@ class Crawler:
         self.extract_from_acordacidade(max_range=2)
         self.extract_from_uefs()
         self.extract_from_g1()
+
     def insert_db(self, data:dict):
         db = Database()
         db.insert(data)
@@ -53,29 +54,60 @@ class Crawler:
                 
                 gdown.download(news['img'], image_path, quiet=False)
             
-            theme = self.get_theme(news['title'])
+            if("www.uefs.br" in news['uri']):
+                theme = self.get_theme(news['title'], "uefs")
+            elif "www.acordacidade.com.br" in news['uri']:
+                theme = self.get_theme(news['title'], "ac")
+            elif "g1.globo.com" in news['uri']:
+                theme = self.get_theme(news['title'], "g1")
+            else:
+                theme = self.get_theme(news['title'])
+            
+            title_original = news['title']
             news['title'] = f"{theme} {news['title']}"
+            uri_original = str(news['uri'].replace("Link: ", ""))
+            news['uri'] = self.short_url(uri_original)
+            
+            len_twitter_post = len(news['title']) + len(news['description']) + len(news['uri'])
+            
+            if(news['img'] != ""):
+                len_twitter_post += 7
+                
+            if((not self.TWITTER_PREMIUM) and (len_twitter_post) > 280):
+                news['description'] = news['description'][:280 - len(news['title']) - len(news['uri']) - 5] + "..."
+
             bot = Bot()
+            print(news, len_twitter_post)
+            print(len(news['title']) + len(news['description']) + len(news['uri']), 280 - len(news['title']) - len(news['uri']) - 3)
+            print(len(news['description']))
+            print(len(news['title']+ news['description']+ news['uri']))
             bot.post(news['title'], news['description'], news['uri'], image_path)
+            news['uri'] = uri_original
+            news['title'] = title_original
+            return True
         except Exception as e:
-            print("Could not post twitter: {}".format(str(e)))
-            raise e
+            print("Could not post twitter - POST {}:{} - ERROR {}".format(news['title'], news['description'], str(e)))
+            return False
     
     def short_url(self, url:str):
         s = Shortener()
         new_url = s.tinyurl.short(url)
         return new_url
     
-    def get_theme(self, title: str) -> str:
+    def get_theme(self, title: str, origin: str = "") -> str:
         themes = {
-            'uefs': '🏫UEFS:',
-            'universidade': '🏫UEFS:',
-            'transporte': '🚌TRANSPORTE:',
-            'ônibus': '🚌TRANSPORTE:',
-            'greve': '🚨GREVE:',
-            'paraliza': '🚨PARALIZAÇÃO:',
-            'paralizam': '🚨PARALIZAÇÃO:'
+            'greve': '🚨 GREVE:',
+            'paraliza': '🚨 PARALIZAÇÃO:',
+            'paralizam': '🚨 PARALIZAÇÃO:',
+            'uefs': '🏫CAMPUS:',
+            'universidade': '🏫 CAMPUS:',
+            'transporte': '🚍 TRANSPORTE:',
+            'ônibus': '🚍 TRANSPORTE:',
+            'g1': '📣 G1:',
+            'ac': '📣 ACORDA CIDADE:'
         }
+        if(origin != ""):
+            return themes[origin]
         
         for keyword in self.KEYWORDS:
             if keyword in title.lower():
@@ -101,7 +133,7 @@ class Crawler:
                     external_id = news.attrs['id']
                     uri = news.attrs['href']
      
-                    if(self.check_exists(uri)):
+                    if(self.check_exists(uri, external_id)):
                         return
 
                     img = news.find('img')
@@ -119,24 +151,20 @@ class Crawler:
                         'external_id': external_id,
                         'uri': uri,
                         'title': title,
-                        'img': img or "",
+                        'img': "",
                         'description': description,
                         'date': final_date
                     }
 
-                    self.insert_db(data)
-                    
-                    data['img'] = ""
-                    data['uri'] = self.short_url(data['uri'])
-                    len_twitter_post = len(data['title']) + len(data['description']) + len(data['uri'])
-                    if((not self.TWITTER_PREMIUM) and (len_twitter_post) > 280):
-                        data['description'] = data['description'][:(len_twitter_post - len(data['description']) - 190)] + "..."
-                    
+
                     if(self.TWITTER_PREMIUM and ("..." in data['description'] or "" in data['description'] or "Leia mais" in data['description'])):
                         news_page = self.request_page(data['uri'])
                         data['description'] = news_page.find('p', {'class': 'sub-title'}).text
                     
-                    self.post_twitter(data)
+                    if(self.post_twitter(data)):
+                        data['img'] = img or ""
+                        self.insert_db(data)
+                    
     
     def extract_from_uefs(self):
         base_url = "https://uefs.br/"
@@ -168,31 +196,34 @@ class Crawler:
                 'date': date
             }
             
+            img = ""
             p = news.find('p')
             if(p is not None):
                 img = p.find('img')
                 if(img is not None):
-                  data['img'] = img.attrs['src']
+                  img = img.attrs['src']
                 description = ((p.text.strip()).replace('\t', '')).replace('Leia mais', '')
                 data['description'] = description.replace('››', '')
                 
+            if(data['description'] == ""):
+                news_page = self.request_page(data['uri'])
+                data['description'] = news_page.find('div', {'id': 'story_text'}).text
 
-            self.insert_db(data)
-            
-            data['img'] = ""
-            data['uri'] = self.short_url(data['uri'])
-            
-            len_twitter_post = len(data['title']) + len(data['description']) + len(data['uri'])
-            if((not self.TWITTER_PREMIUM) and (len_twitter_post) > 280):
-                data['description'] = data['description'][:(len_twitter_post - len(data['description']) - 190)] + "..."
-            
+
             if(self.TWITTER_PREMIUM and ("..." in data['description'] or "" in data['description'] or "Leia mais" in data['description'])):
                 news_page = self.request_page(data['uri'])
                 data['description'] = news_page.find('div', {'id': 'story_text'}).text
-            self.post_twitter(data)
+                
+            
+            if(self.post_twitter(data)): 
+                data['img'] = img or ""
+                self.insert_db(data)
+            
     
     def extract_from_g1(self):
-        soup = self.request_page("https://g1.globo.com/busca/?q=universidade+estadual+de+feira+de+santana+uefs&page=1&order=recent&species=not%C3%ADcias")
+        soup = self.request_page("https://g1.globo.com/busca/?q=uefs&page=1&order=recent&species=not%C3%ADcias&from=now-1h")
+        if(soup == None):
+            return
         all_news = soup.find_all('div', {'class': 'widget--info__text-container'})
         for news in all_news:
             a = news.find('a')
@@ -202,9 +233,15 @@ class Crawler:
                 return
             
             response = self.request_page(uri, deep_request=True)
-            
-            title = a.find('div', {'class': 'widget--info__title product-color'}).text.strip()
-            description = response.find('h2', {'class': 'content-head__subtitle', 'itemprop': 'alternativeHeadline'}).text.strip()
+            if(response == None):
+                return
+            title = a.find('div', {'class': 'widget--info__title product-color'})
+            if(title == None):
+                return
+            title = title.text.strip()
+            description = response.find('h2', {'class': 'content-head__subtitle', 'itemprop': 'alternativeHeadline'})
+            if(description != None):
+                description = description.text.strip()
             date = datetime.strptime(response.find('time', {'itemprop': 'datePublished'}).attrs['datetime'], "%Y-%m-%dT%H:%M:%S.%fZ")
             external_id = 'post-g1-' + str(date.strftime("%Y%m%d%H%M"))
             
@@ -220,22 +257,14 @@ class Crawler:
                 'date': date
             }
             
-            img = response.find('amp-img').attrs['src']
-            if(img is not None):
-                data['img'] = img
-                
-
-            self.insert_db(data)
+            # img = response.find('amp-img').attrs['src']
+            # if(img is not None):
+            #     data['img'] = img
             
-            # data['img'] = ""
-            data['uri'] = self.short_url(data['uri'])
+            # if()
             
-            len_twitter_post = len(data['title']) + len(data['description']) + len(" Link: ") + len(data['uri'])
-            if((not self.TWITTER_PREMIUM) and (len_twitter_post) > 280):
-                data['description'] = data['description'][:(len_twitter_post - len(data['description']) - 194)] + "..."
-            
-            self.post_twitter(data)
-            break
+            if(self.post_twitter(data)):
+                self.insert_db(data)
     
     
 if __name__ == "__main__":

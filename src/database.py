@@ -72,7 +72,41 @@ class Database:
         for news in result:
             response.append({'external_id': news['external_id'], 'title': news['title'], 'uri': news['uri'], 'img': news['img'], 'description': news['description'], 'date': datetime.strftime(news['date'], self.DATE_FORMAT)})
         return response
- 
+
+    def get_filtered_news(self):
+        keywords = ['greve', 'paralizacao', 'paralização', 'bloqueio', 'entrada']
+        conditional_keywords = ['bloqueia', 'bloqueiam']
+        conditional_pairs = {'bloqueia': ['entrada', 'portico', 'pórtico'],
+                             'bloqueiam': ['entrada', 'portico', 'pórtico']}
+        
+        query = {
+            '$and': [
+                {'$or': [
+                    {'title': {'$regex': re.compile(f"{word}", re.I)}},
+                    {'description': {'$regex': re.compile(f"{word}", re.I)}}
+                ] for word in keywords},
+                {'$or': [
+                    {'title': {'$regex': re.compile('uefs', re.I)}},
+                    {'description': {'$regex': re.compile('uefs', re.I)}}
+                ]}
+            ]
+        }
+        
+        for ckey in conditional_keywords:
+            for pair in conditional_pairs[ckey]:
+                or_condition = {
+                    '$or': [
+                        {'title': {'$regex': re.compile(f"{ckey}.*{pair}|{pair}.*{ckey}", re.I)}},
+                        {'description': {'$regex': re.compile(f"{ckey}.*{pair}|{pair}.*{ckey}", re.I)}}
+                    ]
+                }
+                query['$and'].append(or_condition)
+        
+        news_cursor = self.news.find(query).sort("date", -1).limit(1)
+        for news in news_cursor:
+            return {'external_id': news['external_id'], 'title': news['title'], 'uri': news['uri'], 'img': news['img'], 'description': news['description'], 'date': datetime.strftime(news['date'], self.DATE_FORMAT)}
+        return None
+
 if __name__ == "__main__":
     db = Database()
     
