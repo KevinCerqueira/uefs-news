@@ -9,25 +9,31 @@ class Bot:
         consumer_secret = os.getenv('TWITTER_CONSUMER_SECRET')
         access_token = os.getenv('TWITTER_ACCESS_TOKEN')
         access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
-
-        auth = tweepy.OAuth1UserHandler(consumer_key, consumer_secret)
-        auth.set_access_token(
-            access_token,
-            access_token_secret,
-        )
-        self.client_v1 = tweepy.API(auth)
-        self.client_v2 = tweepy.Client(
+        bearer_token = os.getenv('TWITTER_BEARER_TOKEN')
+        
+        self.client = tweepy.Client(
+            bearer_token=r"{}".format(bearer_token),
             consumer_key=consumer_key,
             consumer_secret=consumer_secret,
             access_token=access_token,
             access_token_secret=access_token_secret,
         )
+        
+        auth = tweepy.OAuth1UserHandler(consumer_key, consumer_secret)
+        auth.set_access_token(
+            access_token,
+            access_token_secret,
+        )
+        self.api = tweepy.API(auth)
+
 
     def post(self, title:str, description:str, link:str, image_path:str):
-        message = f"{title}\n\n{description}\n\n {link}"
         if(image_path != ""):
-            media = self.client_v1.media_upload(filename=image_path)
+            message = f"{title}\n\n{description}\n\n Link: {link}"
+            media = self.api.media_upload(filename=image_path)
             media_id = media.media_id
-            self.client_v2.create_tweet(text=message, media_ids=[media_id])
+            self.client.create_tweet(text=message, media_ids=[media_id])
         else:
-            self.client_v2.create_tweet(text=message)
+            message = f"{title}\n\n{description}\n\n {link}"
+            self.client.create_tweet(text=message)
+            
