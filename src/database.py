@@ -1,33 +1,37 @@
 from pymongo.mongo_client import MongoClient
-from dotenv import load_dotenv
 from datetime import datetime
 import os
+from core import Core
+import re
+from bson.objectid import ObjectId
 
-class Database:
-    DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
-    COLUMNS = ['external_id', 'uri', 'title', 'img', 'description', 'date']	
+
+class Database(Core):
+    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+    COLUMNS = ["external_id", "uri", "title", "img", "description", "date", "posted"]
  
-    def __init__(self, fast:bool = False):
-        load_dotenv()
-        self.connect_database()
-  
-    def connect_database(self):
+    def __init__(self):
+        super().__init__(origin=self.__class__.__name__)
+        self.news = self.connect()
+
+    @staticmethod
+    def connect() -> MongoClient:
         client = MongoClient(os.getenv('DB_URI'))
-        db = client[os.getenv('DB_DATABASE')]
-        self.news = db.news
+        database = client[os.getenv('DB_DATABASE')]
+        return database.news
   
-    def exists(self, uri:str, external_id:str = "") -> bool:
+    def exists(self, uri: str, external_id: str = '') -> bool:
         try:
-            query = {'uri': uri}
-            if(external_id != ""):
-                query = {"$or": [{'uri': uri}, {'external_id': external_id}]}
+            query = {"uri": uri}
+            if external_id != '':
+                query = {"$or": [{"uri": uri}, {"external_id": external_id}]}
             return self.news.count_documents(query) > 0
         except Exception as e:
-            print(e)
+            self.log.error(str(e))
             raise e
 
-    def insert(self, data:dict):
-        if(self.exists(data['uri'])):
+    def insert(self, data: dict) -> bool | None:
+        if self.exists(data["uri"], data["external_id"]):
             return
         try:
             self.news.insert_one(data)
@@ -36,76 +40,76 @@ class Database:
             print(e)
             raise e
 
-    def select(self, args:dict):
+    def update(self, uri: str, external_id: str, values: dict) -> bool:
+        try:
+            query = {"uri": uri}
+            if external_id != '':
+                query = {"$or": [{"uri": uri}, {"external_id": external_id}]}
+            return self.news.update_one(query, {'$set': values})
+        except Exception as e:
+            self.log.error(str(e))
+            raise e
+
+    def update_one(self, news_id: ObjectId, values: dict) -> bool:
+        try:
+            return self.news.update_one({"_id": news_id}, {'$set': values})
+        except Exception as e:
+            self.log.error(str(e))
+            raise e
+
+    def get_one(self, uri: str, external_id: str) -> dict | None:
+        try:
+            query = {"$or": [{"uri": uri}, {"external_id": external_id}]}
+            return self.news.find_one(query)
+        except Exception as e:
+            self.log.error(str(e))
+            raise e
+
+    def select(self, args: dict):
         query = dict()
-        if('title' in args):
-            query["title"] = {"$regex": f".*{args['title']}*.", "$options": "i"}
-        if('description' in args):
-            query["description"] = {"$regex": f".*{args['description']}*.", "$options": "i"}
+        if "title" in args:
+            query["title"] = {"$regex": ".*{}*.".format(args["title"]), "$options": "i"}
+        if "description" in args:
+            query["description"] = {"$regex": ".*{}*.".format(args["description"]), "$options": "i"}
             
-        if('start_date' in args and 'end_date' in args):
-            start_date = datetime.strptime(args['start_date'], self.DATE_FORMAT)
-            end_date = datetime.strptime(args['end_date'], self.DATE_FORMAT)
-            query['date'] = {'$gte': start_date, '$lte': end_date}
-        elif('start_date' in args):
-            start_date = datetime.strptime(args['start_date'], self.DATE_FORMAT)
-            query['date'] = {'$gte': start_date}
-        elif('end_date' in args):
-            end_date = datetime.strptime(args['end_date'], self.DATE_FORMAT)
-            query['date'] = {'$lte': end_date}
+        if "start_date" in args and "end_date" in args:
+            start_date = datetime.strptime(args["start_date"], self.DATE_FORMAT)
+            end_date = datetime.strptime(args["end_date"], self.DATE_FORMAT)
+            query["date"] = {"$gte": start_date, "$lte": end_date}
+        elif "start_date" in args:
+            start_date = datetime.strptime(args["start_date"], self.DATE_FORMAT)
+            query["date"] = {"$gte": start_date}
+        elif "end_date" in args:
+            end_date = datetime.strptime(args["end_date"], self.DATE_FORMAT)
+            query["date"] = {"$lte": end_date}
         
-        order = 'date'
+        order = "date"
         sort = -1
         
-        if('order_column' in args):
-            order = args['order_column']
-        if('order_type' in args and args['order_type'] == 'asc'):
+        if "order_column" in args:
+            order = args["order_column"]
+        if "order_type" in args and args["order_type"] == "asc":
             sort = 1
     
         result = self.news.find(query).sort(order, sort)
-        if('limit' in args):
-            result = result.limit(int(args['limit']))
-        if('offset' in args):
-            result = result.skip(int(args['offset']))
+        if "limit" in args:
+            result = result.limit(int(args["limit"]))
+        if "offset" in args:
+            result = result.skip(int(args["offset"]))
 
         response = []
         for news in result:
-            response.append({'external_id': news['external_id'], 'title': news['title'], 'uri': news['uri'], 'img': news['img'], 'description': news['description'], 'date': datetime.strftime(news['date'], self.DATE_FORMAT)})
+            response.append({
+                "external_id": news["external_id"],
+                "title": news["title"],
+                "uri": news["uri"],
+                "img": news["img"],
+                "description": news["description"],
+                "date": datetime.strftime(news["date"], self.DATE_FORMAT)
+            })
+
         return response
 
-    def get_filtered_news(self):
-        keywords = ['greve', 'paralizacao', 'paralização', 'bloqueio', 'entrada']
-        conditional_keywords = ['bloqueia', 'bloqueiam']
-        conditional_pairs = {'bloqueia': ['entrada', 'portico', 'pórtico'],
-                             'bloqueiam': ['entrada', 'portico', 'pórtico']}
-        
-        query = {
-            '$and': [
-                {'$or': [
-                    {'title': {'$regex': re.compile(f"{word}", re.I)}},
-                    {'description': {'$regex': re.compile(f"{word}", re.I)}}
-                ] for word in keywords},
-                {'$or': [
-                    {'title': {'$regex': re.compile('uefs', re.I)}},
-                    {'description': {'$regex': re.compile('uefs', re.I)}}
-                ]}
-            ]
-        }
-        
-        for ckey in conditional_keywords:
-            for pair in conditional_pairs[ckey]:
-                or_condition = {
-                    '$or': [
-                        {'title': {'$regex': re.compile(f"{ckey}.*{pair}|{pair}.*{ckey}", re.I)}},
-                        {'description': {'$regex': re.compile(f"{ckey}.*{pair}|{pair}.*{ckey}", re.I)}}
-                    ]
-                }
-                query['$and'].append(or_condition)
-        
-        news_cursor = self.news.find(query).sort("date", -1).limit(1)
-        for news in news_cursor:
-            return {'external_id': news['external_id'], 'title': news['title'], 'uri': news['uri'], 'img': news['img'], 'description': news['description'], 'date': datetime.strftime(news['date'], self.DATE_FORMAT)}
-        return None
 
 if __name__ == "__main__":
     db = Database()

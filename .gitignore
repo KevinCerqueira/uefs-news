@@ -1,0 +1,7 @@
+src/venv
+src/.env
+.DS_Store
+src/__pycache__
+database.sqlite
+.idea/
+src/tmp/*
