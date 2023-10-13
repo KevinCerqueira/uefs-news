@@ -29,7 +29,7 @@ class Database(Core):
             self.log.error(str(e))
             raise e
 
-    def insert(self, data: dict) -> bool | None:
+    def insert(self, data: dict):
         if self.exists(data["uri"], data["external_id"]):
             return
         try:
