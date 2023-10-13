@@ -71,11 +71,8 @@ class Main(Core):
                         elif self.post(result):
                             self.db.update_one(result["_id"], {"posted": True})
                             self.log.info("News ID {} posted and updated...".format(str(result["_id"])))
-                    else:
-                        continue
                 else:
-                    news_to_post = news.copy()
-                    post = self.post(news_to_post)
+                    post = self.post(dict(news.copy()))
                     if post:
                         news['posted'] = True
                         result = self.db.insert(news)
@@ -134,6 +131,7 @@ class Main(Core):
             "paralizam": "🚨 PARALIZAÇÃO:",
             "uefs": "🏫 CAMPUS:",
             "universidade": "🏫 CAMPUS:",
+            "universidades": "🏫 CAMPUS:",
             "transporte": "🚍 TRANSPORTE:",
             "ônibus": "🚍 TRANSPORTE:",
             "g1": "📣 G1:",
