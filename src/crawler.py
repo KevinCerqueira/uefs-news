@@ -19,7 +19,7 @@ class Crawler(Core):
         self.scrap = Scrap(self.base_url)
         self.keywords = str(os.getenv("KEYWORDS")).split(',')
 
-    def execute(self, twitter_premium: bool = False) -> dict | None:
+    def execute(self, twitter_premium: bool = False):
         pass
 
 

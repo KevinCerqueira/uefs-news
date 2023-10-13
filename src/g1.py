@@ -9,7 +9,7 @@ class G1(Crawler):
             origin=self.__class__.__name__
         )
 
-    def execute(self, twitter_premium: bool = False) -> dict | None:
+    def execute(self, twitter_premium: bool = False):
         self.log.debug("Executing request")
         soup = self.scrap.request()
         if soup is None:

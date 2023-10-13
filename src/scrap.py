@@ -11,7 +11,7 @@ class Scrap(Core):
         super().__init__(origin=self.__class__.__name__)
         self.url = url
 
-    def request(self, url: str = "", deep_request: bool = False) -> BeautifulSoup | None:
+    def request(self, url: str = "", deep_request: bool = False):
         try:
             if url != "":
                 self.url = url
