@@ -2,7 +2,6 @@ from pymongo.mongo_client import MongoClient
 from datetime import datetime
 import os
 from core import Core
-import re
 from bson.objectid import ObjectId
 
 
@@ -57,7 +56,7 @@ class Database(Core):
             self.log.error(str(e))
             raise e
 
-    def get_one(self, uri: str, external_id: str) -> dict | None:
+    def get_one(self, uri: str, external_id: str):
         try:
             query = {"$or": [{"uri": uri}, {"external_id": external_id}]}
             return self.news.find_one(query)
