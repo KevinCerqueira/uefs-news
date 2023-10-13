@@ -11,7 +11,7 @@ class AcordaCidade(Crawler):
             origin=self.__class__.__name__
         )
 
-    def execute(self, twitter_premium: bool = False) -> dict | None:
+    def execute(self, twitter_premium: bool = False):
         self.log.debug("Executing request")
         for page in range(1, self.max_range):
             soup = self.scrap.request(f"{self.base_url}{page}")
