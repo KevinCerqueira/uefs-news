@@ -42,7 +42,7 @@ class Bot(Core):
             else:
                 self.log.info("Posting to twitter")
 
-                message = f"{title}\n\n{description}\n\n {link}"
+                message = f"{title}\n\n{description}\n\n Link: {link}"
                 self.client.create_tweet(text=message)
             return True
         except Exception as e:

@@ -13,6 +13,7 @@ from database import Database
 class Main(Core):
     POST_WITH_IMAGE: bool = False
     CHARACTER_LIMIT: int = 280
+    EXTRA_LIMIT: int = 10
     uefs: UefsBr
     ac: AcordaCidade
     g1: G1
@@ -76,8 +77,8 @@ class Main(Core):
                     post = self.post(dict(news.copy()))
                     if post:
                         news['posted'] = True
-                        result = self.db.insert(news)
-                        self.log.info("News ID {} posted and created...".format(str(result)))
+                        self.db.insert(news)
+                        self.log.info("New News posted and created...")
 
             except Exception as e:
                 self.log.error(str(e))
@@ -104,17 +105,18 @@ class Main(Core):
             news["title"] = "{} {}".format(theme, news["title"])
             news["uri"] = self.short_url(news["uri"])
 
-            len_twitter_post = len(news["title"]) + len(news["description"]) + len(news["uri"])
-            if news["img"] != "":
-                len_twitter_post += 7
+            len_twitter_post = len(news["title"]) + len(news["description"]) + len(news["uri"]) + self.EXTRA_LIMIT
 
             if (not self.premium) and len_twitter_post > self.CHARACTER_LIMIT:
-                len_to_cut = len(news["title"]) - len(news["uri"]) - 5
-                news["description"] = news["description"][:self.CHARACTER_LIMIT - len_to_cut] + "..."
+                extra_chars = len(news["title"]) + len(news["uri"]) + self.EXTRA_LIMIT
+                available_space = self.CHARACTER_LIMIT - extra_chars
+                news["description"] = news["description"][:available_space] + "..."
 
-            self.log.debug("News: {}, len_twitter_post: {}".format(str(news), len_twitter_post))
+            self.log.debug("News: {}".format(str(news)))
+            self.log.debug("Len total post: {}".format(len_twitter_post))
             self.log.debug("Len description: {}".format(len(news["description"])))
             self.log.debug("Len cut: {}".format(int(self.CHARACTER_LIMIT - len(news["title"]) - len(news["uri"]) - 5)))
+            self.log.debug("Len final: {}".format(len(news["title"] + news["description"] + news["uri"])))
 
             return self.bot.post(news["title"], news["description"], news["uri"], image_path)
         except Exception as e:
