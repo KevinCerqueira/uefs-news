@@ -11,7 +11,8 @@ from database import Database
 
 
 class Main(Core):
-    CHARACTER_LIMIT = 280
+    POST_WITH_IMAGE: bool = False
+    CHARACTER_LIMIT: int = 280
     uefs: UefsBr
     ac: AcordaCidade
     g1: G1
@@ -85,15 +86,20 @@ class Main(Core):
     def post(self, news: dict) -> bool:
         try:
             image_path = ""
-            if news["img"] != "":
+            if news["img"] != "" and self.POST_WITH_IMAGE:
                 if not os.path.exists("tmp"):
                     os.makedirs("tmp")
                 image_path = f"/tmp/{news['external_id']}.jpg"
                 gdown.download(news["img"], image_path, quiet=False)
 
-            theme = self.get_theme(news["title"])
             if "g1.globo.com" in news["uri"]:
                 theme = self.get_theme(news["title"], "g1")
+            elif "uefs.br" in news["uri"]:
+                theme = self.get_theme(news["title"], "uefs")
+            elif "acordacidade.com.br" in news["uri"]:
+                theme = self.get_theme(news["title"], "ac")
+            else:
+                theme = self.get_theme(news["title"])
 
             news["title"] = "{} {}".format(theme, news["title"])
             news["uri"] = self.short_url(news["uri"])
@@ -125,6 +131,7 @@ class Main(Core):
 
     @staticmethod
     def get_theme(title: str, origin: str = "") -> str:
+        theme = ""
         themes = {
             "greve": "🚨 GREVE:",
             "paraliza": "🚨 PARALIZAÇÃO:",
@@ -138,16 +145,16 @@ class Main(Core):
             "ac": "📣 ACORDA CIDADE:"
         }
 
-        if origin != "":
-            return themes[origin]
-
         for keyword in os.getenv("KEYWORDS"):
             if keyword in title.lower():
-                return themes.get(keyword, "")
+                theme = themes.get(keyword, "")
+
+        if theme == "" and origin != "":
+            return themes[origin]
 
         return ""
 
 
 if __name__ == "__main__":
     main = Main()
-    main.schedule()
+    main.schedule(minutes=3)
