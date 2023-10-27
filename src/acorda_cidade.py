@@ -4,7 +4,7 @@ from crawler import Crawler
 
 class AcordaCidade(Crawler):
 
-    def __init__(self, max_range: int = 1) -> None:
+    def __init__(self, max_range: int = 2) -> None:
         super().__init__(
             base_url="https://www.acordacidade.com.br/noticias/page/",
             max_range=max_range,

@@ -59,9 +59,9 @@ class Main(Core):
         if news_ac is not None:
             all_news.append(news_ac)
 
-        # news_g1 = self.g1.execute()
-        # if news_g1 is not None:
-        #     all_news.append(news_g1)
+        news_g1 = self.g1.execute()
+        if news_g1 is not None:
+            all_news.append(news_g1)
 
         for news in all_news:
             try:
@@ -104,6 +104,10 @@ class Main(Core):
 
             news["title"] = "{} {}".format(theme, news["title"])
             news["uri"] = self.short_url(news["uri"])
+
+            if "acordacidade.com.br" not in news["uri"]:
+                news["uri"] = "🔗 " + news["uri"]
+            news["description"] = "📌 " + news["description"]
 
             len_twitter_post = len(news["title"]) + len(news["description"]) + len(news["uri"]) + self.EXTRA_LIMIT
 
@@ -154,7 +158,7 @@ class Main(Core):
         if theme == "" and origin != "":
             return themes[origin]
 
-        return ""
+        return theme
 
 
 if __name__ == "__main__":

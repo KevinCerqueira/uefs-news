@@ -32,17 +32,14 @@ class Bot(Core):
 
     def post(self, title: str, description: str, link: str, image_path: str = '') -> bool:
         try:
+            message = f"{title}\n\n{description}\n\n {link}"
             if image_path != '':
                 self.log.info("Posting to twitter with media")
-
-                message = f"{title}\n\n{description}\n\n Link: {link}"
                 media = self.api.media_upload(filename=image_path)
                 media_id = media.media_id
                 self.client.create_tweet(text=message, media_ids=[media_id])
             else:
                 self.log.info("Posting to twitter")
-
-                message = f"{title}\n\n{description}\n\n Link: {link}"
                 self.client.create_tweet(text=message)
             return True
         except Exception as e:
