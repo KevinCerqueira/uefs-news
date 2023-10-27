@@ -6,11 +6,15 @@ from datetime import datetime, date
 
 class Log:
 
+    level: str
+
     def __init__(self, origin: str = "any") -> None:
+        load_dotenv()
         self.origin = origin
         self.path_log = '/tmp/logs/log_'
         if platform.system() not in ['Linux', 'Darwin']:
             self.path_log = '\\tmp\\logs\\log_'
+        self.level = os.getenv("LOG_LEVEL")
 
     def register(self, level: str, msg: str) -> None:
         if not os.path.exists('tmp/logs'):
@@ -25,10 +29,12 @@ class Log:
         self.register('ERROR', self.origin + " - " + msg)
 
     def info(self, msg: str) -> None:
-        self.register('INFO', self.origin + " - " + msg)
+        if self.level != "error":
+            self.register('INFO', self.origin + " - " + msg)
 
     def debug(self, msg: str) -> None:
-        self.register('DEBUG', self.origin + " - " + msg)
+        if self.level == "debug":
+            self.register('DEBUG', self.origin + " - " + msg)
 
 
 class Core:
