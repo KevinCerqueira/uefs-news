@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
 import platform
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+import glob
 
 
 class Log:
@@ -11,14 +12,18 @@ class Log:
     def __init__(self, origin: str = "any") -> None:
         load_dotenv()
         self.origin = origin
-        self.path_log = '/tmp/logs/log_'
-        if platform.system() not in ['Linux', 'Darwin']:
-            self.path_log = '\\tmp\\logs\\log_'
         self.level = os.getenv("LOG_LEVEL")
 
+        self.path = "/tmp/logs/"
+        if platform.system() == "Windows":
+            self.path = "\\tmp\\logs\\"
+        self.path_log = self.path + "log_"
+
+        self.clean_old_logs()
+
     def register(self, level: str, msg: str) -> None:
-        if not os.path.exists('tmp/logs'):
-            os.makedirs('tmp/logs')
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
         with open(
                 os.path.dirname(os.path.realpath(__file__)) + self.path_log + str(date.today()) + '.log', 'a',
                 encoding='utf-8'
@@ -35,6 +40,19 @@ class Log:
     def debug(self, msg: str) -> None:
         if self.level == "debug":
             self.register('DEBUG', self.origin + " - " + msg)
+
+    def clean_old_logs(self):
+        now = datetime.now()
+        retention_days = 3
+        cutoff = now - timedelta(days=retention_days)
+
+        files = glob.glob(os.path.dirname(os.path.realpath(__file__)) + self.path_log + "*.log")
+        for file in files:
+            file_date_str = file.split('_')[-1].split('.')[0]
+            file_date = datetime.strptime(file_date_str, '%Y-%m-%d').date()
+            if datetime.combine(file_date, datetime.min.time()) < cutoff:
+                os.remove(file)
+                self.info(f"Log file {file} removed.")
 
 
 class Core:
