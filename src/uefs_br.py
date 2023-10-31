@@ -31,6 +31,7 @@ class UefsBr(Crawler):
                 "img": "",
                 "description": "",
                 "date": date,
+                "source": self.__class__.__name__,
                 "posted": False
             }
 

@@ -5,7 +5,7 @@ from crawler import Crawler
 class G1(Crawler):
     def __init__(self) -> None:
         super().__init__(
-            base_url="https://g1.globo.com/busca/?q=uefs&page=1&order=recent&species=not%C3%ADcias&from=now-1h",
+            base_url="https://g1.globo.com/busca/?q=uefs&page=1&order=recent&species=not%C3%ADcias",
             origin=self.__class__.__name__
         )
 
@@ -53,6 +53,7 @@ class G1(Crawler):
                 "img": "",
                 "description": description,
                 "date": date,
+                "source": self.__class__.__name__,
                 "posted": False
             }
 

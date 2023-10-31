@@ -49,7 +49,7 @@ class Main(Core):
 
     def execute(self) -> None:
         all_news = list()
-        self.log.info("Executing job...")
+        self.log.debug("Executing job...")
 
         news_uefs = self.uefs.execute()
         if news_uefs is not None:
@@ -93,21 +93,14 @@ class Main(Core):
                 image_path = f"/tmp/{news['external_id']}.jpg"
                 gdown.download(news["img"], image_path, quiet=False)
 
-            if "g1.globo.com" in news["uri"]:
-                theme = self.get_theme(news["title"], "g1")
-            elif "uefs.br" in news["uri"]:
-                theme = self.get_theme(news["title"], "uefs")
-            elif "acordacidade.com.br" in news["uri"]:
-                theme = self.get_theme(news["title"], "ac")
-            else:
-                theme = self.get_theme(news["title"])
-
+            theme = self.get_theme(news["title"], news["source"])
             news["title"] = "{} {}".format(theme, news["title"])
             news["uri"] = self.short_url(news["uri"])
 
-            if "acordacidade.com.br" not in news["uri"]:
+            if news["source"] != "AcordaCidade":
                 news["uri"] = "🔗 " + news["uri"]
-            news["description"] = "📌 " + news["description"]
+
+            news["description"] = "📌 " + str(news["description"].replace("\n", ""))
 
             len_twitter_post = len(news["title"]) + len(news["description"]) + len(news["uri"]) + self.EXTRA_LIMIT
 
@@ -135,8 +128,7 @@ class Main(Core):
         new_url = s.tinyurl.short(url)
         return new_url
 
-    @staticmethod
-    def get_theme(title: str, origin: str = "") -> str:
+    def get_theme(self, title: str, origin: str = "UefsBr") -> str:
         theme = ""
         themes = {
             "greve": "🚨 GREVE:",
@@ -147,17 +139,21 @@ class Main(Core):
             "universidades": "🏫 CAMPUS:",
             "transporte": "🚍 TRANSPORTE:",
             "ônibus": "🚍 TRANSPORTE:",
-            "g1": "📣 G1:",
-            "ac": "📣 ACORDA CIDADE:"
+            "UefsBr": "🏫 CAMPUS:",
+            "G1": "📣 G1:",
+            "AcordaCidade": "📣 ACORDA CIDADE:"
         }
 
         for keyword in os.getenv("KEYWORDS"):
             if keyword in title.lower():
                 theme = themes.get(keyword, "")
+                if theme != "":
+                    break
 
-        if theme == "" and origin != "":
-            return themes[origin]
+        if theme == "":
+            theme = themes[origin]
 
+        self.log.info(f"Title: {title}. THEME: {theme}")
         return theme
 
 

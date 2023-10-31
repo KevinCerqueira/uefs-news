@@ -50,6 +50,7 @@ class AcordaCidade(Crawler):
                         "img": '',
                         "description": description,
                         "date": final_date,
+                        "source": self.__class__.__name__,
                         "posted": False
                     }
 
