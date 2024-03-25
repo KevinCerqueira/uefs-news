@@ -20,7 +20,13 @@ class UefsBr(Crawler):
             a = h2.find('a')
             title = (a.text.strip()).replace('\t', '')
             title = title.replace("››", '')
-            uri = a.attrs["href"]
+
+            href = a.attrs["href"]
+            uri = ""
+            for u in href:
+                if u != '\n':
+                    uri += u.strip()
+
             date = datetime.strptime(news.find("span", {"class": "date"}).text, "%d/%m/%Y %H:%M")
             external_id = "post-uefs-" + str(date.strftime("%Y%m%d%H%M"))
 

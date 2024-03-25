@@ -37,11 +37,11 @@ class AcordaCidade(Crawler):
                     description = content.find('p', {"class": "sub-text resumo-18"}).text
                     description = description.replace("››", '')
 
-                    date, hour = content.find('p', {"class": "data-single"}).text.split(" às ")
-                    final_date = datetime.strptime(
-                        date.strip() + ' ' + hour.strip().replace('h', ':'),
-                        "%d/%m/%Y %H:%M"
-                    )
+                    # date, hour = content.find('p', {"class": "data-single"}).text.split(" às ")
+                    # final_date = datetime.strptime(
+                    #     date.strip() + ' ' + hour.strip().replace('h', ':'),
+                    #     "%d/%m/%Y %H:%M"
+                    # )
 
                     data = {
                         "external_id": external_id,
@@ -49,7 +49,7 @@ class AcordaCidade(Crawler):
                         "title": title,
                         "img": '',
                         "description": description,
-                        "date": final_date,
+                        "date": datetime.now(),
                         "source": self.__class__.__name__,
                         "posted": False
                     }

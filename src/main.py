@@ -24,7 +24,7 @@ class Main(Core):
     def __init__(self) -> None:
         super().__init__(origin=self.__class__.__name__)
         self.uefs = UefsBr()
-        self.ac = AcordaCidade()
+        self.ac = AcordaCidade(max_range=5)
         self.g1 = G1()
         self.bot = Bot()
         self.db = Database()
@@ -144,11 +144,16 @@ class Main(Core):
             "AcordaCidade": "📣 ACORDA CIDADE:"
         }
 
-        for keyword in os.getenv("KEYWORDS"):
-            if keyword in title.lower():
-                theme = themes.get(keyword, "")
-                if theme != "":
-                    break
+        if 'greve' in title:
+            return themes['greve']
+        elif 'paraliza' in title:
+            return themes['paraliza']
+        else:
+            for keyword in os.getenv("KEYWORDS"):
+                if keyword in title.lower():
+                    theme = themes.get(keyword, "")
+                    if theme != "":
+                        break
 
         if theme == "":
             theme = themes[origin]

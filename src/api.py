@@ -1,29 +1,51 @@
-from flask import Flask, request, jsonify, Response
-from flask_cors import CORS
-import json
+from flask import Flask, request
+from flask_restful import Resource, Api
+from pymongo import MongoClient
+from dotenv import load_dotenv
 from database import Database
+import os
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+import bcrypt
 
-api = Flask(__name__)
-CORS(api)
+load_dotenv()
 
-@api.route('/', methods=['GET', 'POST'])
-def home():
-    return response(status=True, data="Welcome!")
+secret_key = os.urandom(24).hex()
 
-@api.route('/news', methods=['GET'])
-def news():
-    try:
-        args = request.args.to_dict()
-        db = Database()
-        return response(status=True, data=db.select(args))
-    except Exception as e:
-        return response(status=False, data=str(e))
+app = Flask(__name__)
+app.config['SECRET_KEY'] = secret_key
+api = Api(app)
 
-def response(status:bool, data:any):
-    resp = {'success': True, 'data': data}
-    if(not status):
-        resp = {'success': False, 'error': data}
-    return Response(response=json.dumps(resp, sort_keys=False), mimetype='application/json')
+client = MongoClient(os.getenv("DB_URI"))
+db = client[os.getenv("DB_DATABASE")]
+users_collection = db.users
+
+
+def authenticate(username, password):
+    user = users_collection.find_one({"username": username})
+    if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
+        return user
+
+
+def identity(payload):
+    user_id = payload['identity']
+    return users_collection.find_one({"_id": user_id})
+
+
+jwt = JWT(app, authenticate, identity)
+
+
+class RestrictedArea(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            args = request.args.to_dict()
+            database = Database()
+            return {'success': True, 'data': database.select(args)}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+
+api.add_resource(RestrictedArea, '/news')
 
 if __name__ == '__main__':
-    api.run(debug=False)
+    app.run(debug=True)
