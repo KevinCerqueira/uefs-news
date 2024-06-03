@@ -144,9 +144,9 @@ class Main(Core):
             "AcordaCidade": "📣 ACORDA CIDADE:"
         }
 
-        if 'greve' in title:
+        if 'greve' in title or 'Greve' in title:
             return themes['greve']
-        elif 'paraliza' in title:
+        elif 'paraliza' in title or 'Paraliza' in title:
             return themes['paraliza']
         else:
             for keyword in os.getenv("KEYWORDS"):
